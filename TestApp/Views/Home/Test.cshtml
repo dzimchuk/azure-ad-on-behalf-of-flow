@@ -1,0 +1,34 @@
+﻿@model Contracts.ClaimSet
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Test";
+}
+
+@{ var currentSet = Model; }
+
+@do
+{
+    <p>
+        <h3>@currentSet.ServiceName</h3>
+
+        <table class="table-hover claim-table">
+            <tr>
+                <th class="claim-type claim-data claim-head">Claim Type</th>
+                <th class="claim-data claim-head">Claim Value</th>
+            </tr>
+
+            @foreach (var claim in currentSet.Claims)
+            {
+                <tr>
+                    <td class="claim-type claim-data">@claim.Key</td>
+                    <td class="claim-data">@claim.Value</td>
+                </tr>
+            }
+        </table>
+    </p>
+    
+    currentSet = currentSet.InnerClaimSet;
+
+} while (currentSet != null);
+
