@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TestServiceA.Proxy;
+using Microsoft.AspNetCore.Http;
 
 namespace TestServiceA
 {
@@ -36,8 +37,10 @@ namespace TestServiceA
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<AuthenticationOptions>(Configuration.GetSection("TestServiceA:Authentication:AzureAd"));
-            services.Configure<DownstreamServiceProxyOptions>(Configuration.GetSection("TestServiceA:DownstreamService:BaseUrl"));
+            services.Configure<DownstreamServiceProxyOptions>(Configuration.GetSection("TestServiceA:DownstreamService"));
             services.AddScoped<DownstreamServiceProxy>();
+
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             services.AddMvc();
         }

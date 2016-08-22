@@ -1,12 +1,13 @@
 ﻿using Contracts;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace TestServiceA.Proxy
@@ -15,30 +16,41 @@ namespace TestServiceA.Proxy
     {
         private readonly AuthenticationOptions authOptions;
         private readonly DownstreamServiceProxyOptions serviceOptions;
+        private readonly IHttpContextAccessor httpContextAccessor;
 
-        public DownstreamServiceProxy(IOptions<AuthenticationOptions> authOptions, IOptions<DownstreamServiceProxyOptions> serviceOptions)
+        public DownstreamServiceProxy(IOptions<AuthenticationOptions> authOptions, 
+            IOptions<DownstreamServiceProxyOptions> serviceOptions,
+            IHttpContextAccessor httpContextAccessor)
         {
             this.authOptions = authOptions.Value;
             this.serviceOptions = serviceOptions.Value;
+            this.httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<ClaimSet> GetClaimSetAsync(string userId)
+        public async Task<ClaimSet> GetClaimSetAsync()
         {
             var client = new HttpClient { BaseAddress = new Uri(serviceOptions.BaseUrl, UriKind.Absolute) };
             client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(userId));
+                new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync());
 
             var payload = await client.GetStringAsync("api/claims");
             return JsonConvert.DeserializeObject<ClaimSet>(payload);
         }
 
-        private async Task<string> GetAccessTokenAsync(string userId)
+        private async Task<string> GetAccessTokenAsync()
         {
             var credential = new ClientCredential(authOptions.ClientId, authOptions.ClientSecret);
             var authenticationContext = new AuthenticationContext(authOptions.Authority);
 
-            var user = !string.IsNullOrEmpty(userId) ? new UserIdentifier(userId, UserIdentifierType.UniqueId) : UserIdentifier.AnyUser;
-            var result = await authenticationContext.AcquireTokenSilentAsync(authOptions.ApiResource, credential, user);
+            var originalToken = await httpContextAccessor.HttpContext.Authentication.GetTokenAsync("access_token");
+            var userName = httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Upn)?.Value ??
+                httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+
+            var userAssertion = new UserAssertion(originalToken, 
+                "urn:ietf:params:oauth:grant-type:jwt-bearer", userName);
+
+            var result = await authenticationContext.AcquireTokenAsync(serviceOptions.Resource,
+                credential, userAssertion);
 
             return result.AccessToken;
         }
