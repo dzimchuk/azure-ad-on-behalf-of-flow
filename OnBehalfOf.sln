@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TestApp", "TestApp\TestApp.xproj", "{C392B3C7-8F26-4674-A3F4-0DCBF214127E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestApp", "TestApp\TestApp.csproj", "{C392B3C7-8F26-4674-A3F4-0DCBF214127E}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TestServiceA", "TestServiceA\TestServiceA.xproj", "{DFD3CDC4-F1D2-429F-9766-CAFDF7945534}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServiceA", "TestServiceA\TestServiceA.csproj", "{DFD3CDC4-F1D2-429F-9766-CAFDF7945534}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Contracts", "Contracts\Contracts.xproj", "{E615605D-FAEB-432D-9367-8EEDD67093B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Contracts", "Contracts\Contracts.csproj", "{E615605D-FAEB-432D-9367-8EEDD67093B7}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TestServiceB", "TestServiceB\TestServiceB.xproj", "{F85F5DE8-CDAE-4380-8891-C4BB021B2CAE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServiceB", "TestServiceB\TestServiceB.csproj", "{F85F5DE8-CDAE-4380-8891-C4BB021B2CAE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +36,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CC455B67-5901-48FC-A905-F46FC56D4163}
 	EndGlobalSection
 EndGlobal

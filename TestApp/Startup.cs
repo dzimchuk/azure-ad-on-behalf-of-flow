@@ -15,42 +15,50 @@ namespace TestApp
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env)
+        private readonly IConfiguration configuration;
+
+        public Startup(IConfiguration configuration)
         {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables();
-
-            if (env.IsDevelopment())
-            {
-                builder.AddUserSecrets();
-            }
-
-            Configuration = builder.Build();
-
-            System.Net.ServicePointManager.ServerCertificateValidationCallback +=
-                (o, certificate, chain, errors) => true;
+            this.configuration = configuration;
         }
-
-        private IConfigurationRoot Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<AuthenticationOptions>(Configuration.GetSection("TestApp:Authentication:AzureAd"));
-            services.Configure<TestServiceOptions>(Configuration.GetSection("TestApp:TestService"));
+            services.Configure<AuthenticationOptions>(configuration.GetSection("TestApp:Authentication:AzureAd"));
+            services.Configure<TestServiceOptions>(configuration.GetSection("TestApp:TestService"));
             services.AddScoped<TestServiceProxy>();
 
             services.AddMvc();
+
+            var serviceProvider = services.BuildServiceProvider();
+            var authOptions = serviceProvider.GetService<IOptions<AuthenticationOptions>>();
+            var serviceOptions = serviceProvider.GetService<IOptions<TestServiceOptions>>();
+
+            services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            })
+            .AddCookie()
+            .AddOpenIdConnect(options =>
+            {
+                options.Authority = authOptions.Value.Authority;
+                options.ClientId = authOptions.Value.ClientId;
+                options.ClientSecret = authOptions.Value.ClientSecret;
+
+                options.ResponseType = OpenIdConnectResponseType.CodeIdToken;
+                options.SignedOutRedirectUri = authOptions.Value.PostLogoutRedirectUri;
+
+                // it will fall back on using DefaultSignInScheme if not set
+                //options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+
+                options.Events = CreateOpenIdConnectEventHandlers(authOptions.Value, serviceOptions.Value);
+            });
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory,
             IOptions<AuthenticationOptions> authOptions, IOptions<TestServiceOptions> serviceOptions)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -63,26 +71,7 @@ namespace TestApp
 
             app.UseStaticFiles();
 
-            app.UseCookieAuthentication(new CookieAuthenticationOptions
-            {
-                AutomaticAuthenticate = true
-            });
-
-            app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
-            {
-                AutomaticChallenge = true,
-
-                Authority = authOptions.Value.Authority,
-                ClientId = authOptions.Value.ClientId,
-                ClientSecret = authOptions.Value.ClientSecret,
-
-                ResponseType = OpenIdConnectResponseType.CodeIdToken,
-
-                SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme,
-                PostLogoutRedirectUri = authOptions.Value.PostLogoutRedirectUri,
-
-                Events = CreateOpenIdConnectEventHandlers(authOptions.Value, serviceOptions.Value)
-            });
+            app.UseAuthentication();
 
             app.UseMvc(routes =>
             {
@@ -92,17 +81,18 @@ namespace TestApp
             });
         }
 
-        private static IOpenIdConnectEvents CreateOpenIdConnectEventHandlers(AuthenticationOptions authOptions, TestServiceOptions serviceOptions) => new OpenIdConnectEvents
-        {
-            OnAuthorizationCodeReceived = async context =>
+        private static OpenIdConnectEvents CreateOpenIdConnectEventHandlers(AuthenticationOptions authOptions, TestServiceOptions serviceOptions) 
+            => new OpenIdConnectEvents
             {
-                var clientCredential = new ClientCredential(authOptions.ClientId, authOptions.ClientSecret);
-                var authenticationContext = new AuthenticationContext(authOptions.Authority);
-                await authenticationContext.AcquireTokenByAuthorizationCodeAsync(context.TokenEndpointRequest.Code,
-                    new Uri(context.TokenEndpointRequest.RedirectUri, UriKind.RelativeOrAbsolute), clientCredential, serviceOptions.Resource);
+                OnAuthorizationCodeReceived = async context =>
+                {
+                    var clientCredential = new ClientCredential(authOptions.ClientId, authOptions.ClientSecret);
+                    var authenticationContext = new AuthenticationContext(authOptions.Authority);
+                    var result = await authenticationContext.AcquireTokenByAuthorizationCodeAsync(context.TokenEndpointRequest.Code,
+                        new Uri(context.TokenEndpointRequest.RedirectUri, UriKind.RelativeOrAbsolute), clientCredential, serviceOptions.Resource);
 
-                context.HandleCodeRedemption();
-            }
-        };
+                    context.HandleCodeRedemption(result.AccessToken, result.IdToken);
+                }
+            };
     }
 }

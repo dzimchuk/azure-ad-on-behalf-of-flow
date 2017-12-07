@@ -42,7 +42,7 @@ namespace TestServiceA.Proxy
             var credential = new ClientCredential(authOptions.ClientId, authOptions.ClientSecret);
             var authenticationContext = new AuthenticationContext(authOptions.Authority);
 
-            var originalToken = await httpContextAccessor.HttpContext.Authentication.GetTokenAsync("access_token");
+            var originalToken = await httpContextAccessor.HttpContext.GetTokenAsync("access_token");
             var userName = httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Upn)?.Value ??
                 httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
 
