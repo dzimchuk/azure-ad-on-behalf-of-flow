@@ -4,6 +4,8 @@ A sample solution demonstrating how you can configure your ASP.NET Core 2.0 appl
 
 The solution uses Azure AD as its identity provider.
 
+Please find more details in the accompanying [blog post](https://dzimchuk.net/using-the-on-behalf-of-flow-in-your-aspnet-core-services-protected-by-azure-ad/).
+
 # Configuration
 
 ## Web App (TestApp)
