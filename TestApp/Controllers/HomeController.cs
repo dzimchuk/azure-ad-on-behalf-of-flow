@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Contracts;
 using Microsoft.AspNetCore.Authorization;
-using TestApp.Proxy;
-using Contracts;
+using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using TestApp.Models;
+using TestApp.Proxy;
 
 namespace TestApp.Controllers
 {
@@ -28,15 +30,17 @@ namespace TestApp.Controllers
             {
                 ServiceName = "TestApp",
                 Claims = User.Claims.ToDictionary(claim => claim.Type, claim => claim.Value),
-                InnerClaimSet = await proxy.GetClaimSetAsync(User.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value)
+                InnerClaimSet = await proxy.GetClaimSetAsync()
             };
 
             return View(claimSet);
         }
 
+        [AllowAnonymous]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View();
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

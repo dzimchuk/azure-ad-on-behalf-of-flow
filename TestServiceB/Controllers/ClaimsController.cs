@@ -6,6 +6,7 @@ using Contracts;
 namespace TestServiceB.Controllers
 {
     [Authorize]
+    [ApiController]
     [Route("api/[controller]")]
     public class ClaimsController : Controller
     {

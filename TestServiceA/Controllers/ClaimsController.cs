@@ -7,6 +7,7 @@ using TestServiceA.Proxy;
 namespace TestServiceA.Controllers
 {
     [Authorize]
+    [ApiController]
     [Route("api/[controller]")]
     public class ClaimsController : Controller
     {

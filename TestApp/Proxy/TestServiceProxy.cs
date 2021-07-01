@@ -1,44 +1,36 @@
 ﻿using Contracts;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using Microsoft.Identity.Web;
 using Newtonsoft.Json;
-using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace TestApp.Proxy
 {
     public class TestServiceProxy
     {
-        private readonly AuthenticationOptions authOptions;
-        private readonly TestServiceOptions serviceOptions;
+        private readonly IDownstreamWebApi downstreamWebApi;
 
-        public TestServiceProxy(IOptions<AuthenticationOptions> authOptions, IOptions<TestServiceOptions> serviceOptions)
+        public TestServiceProxy(IDownstreamWebApi downstreamWebApi)
         {
-            this.authOptions = authOptions.Value;
-            this.serviceOptions = serviceOptions.Value;
+            this.downstreamWebApi = downstreamWebApi;
         }
 
-        public async Task<ClaimSet> GetClaimSetAsync(string userId)
+        public async Task<ClaimSet> GetClaimSetAsync()
         {
-            var client = new HttpClient { BaseAddress = new Uri(serviceOptions.BaseUrl, UriKind.Absolute) };
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(userId));
+            var response = await downstreamWebApi.CallWebApiForUserAsync(
+                        "TestServiceA",
+                        options =>
+                        {
+                            options.RelativePath = "api/claims";
+                        });
 
-            var payload = await client.GetStringAsync("api/claims");
-            return JsonConvert.DeserializeObject<ClaimSet>(payload);
-        }
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ClaimSet>(content);
+            }
 
-        private async Task<string> GetAccessTokenAsync(string userId)
-        {
-            var credential = new ClientCredential(authOptions.ClientId, authOptions.ClientSecret);
-            var authenticationContext = new AuthenticationContext(authOptions.Authority);
-
-            var user = !string.IsNullOrEmpty(userId) ? new UserIdentifier(userId, UserIdentifierType.UniqueId) : UserIdentifier.AnyUser;
-            var result = await authenticationContext.AcquireTokenSilentAsync(serviceOptions.Resource, credential, user);
-
-            return result.AccessToken;
+            return null;
         }
     }
 }
